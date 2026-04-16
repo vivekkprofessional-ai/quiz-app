@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-on-error-container: #93000a;
+  --color-tertiary-container: #005d3d;
+  --color-on-surface-variant: #424751;
+  --color-inverse-surface: #2d3133;
+  --color-tertiary-fixed-dim: #75daa8;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-fixed-variant: #0e5138;
+  --color-primary-fixed-dim: #a7c8ff;
+  --color-on-surface: #191c1e;
+  --color-secondary: #2c694e;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-tertiary-fixed-variant: #005235;
+  --color-on-primary-fixed-variant: #1f477b;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-variant: #e0e3e5;
+  --color-error: #ba1a1a;
+  --color-tertiary: #00432b;
+  --color-on-background: #191c1e;
+  --color-tertiary-fixed: #92f7c3;
+  --color-inverse-primary: #a7c8ff;
+  --color-secondary-fixed-dim: #95d4b3;
+  --color-on-tertiary-fixed: #002113;
+  --color-on-secondary-fixed: #002114;
+  --color-on-primary: #ffffff;
+  --color-surface-container-high: #e6e8ea;
+  --color-background: #f7f9fb;
+  --color-surface-tint: #3a5f94;
+  --color-on-tertiary: #ffffff;
+  --color-on-error: #ffffff;
+  --color-secondary-container: #aeeecb;
+  --color-surface-bright: #f7f9fb;
+  --color-error-container: #ffdad6;
+  --color-on-tertiary-container: #73d7a6;
+  --color-outline-variant: #c2c6d3;
+  --color-primary-fixed: #d5e3ff;
+  --color-surface-container-highest: #e0e3e5;
+  --color-outline: #727782;
+  --color-on-secondary-container: #316e52;
+  --color-primary: #0c3a6d;
+  --color-inverse-on-surface: #eff1f3;
+  --color-surface: #f7f9fb;
+  --color-on-primary-fixed: #001b3c;
+  --color-surface-dim: #d8dadc;
+  --color-secondary-fixed: #b1f0ce;
+  --color-primary-container: #2b5186;
+  --color-on-primary-container: #a3c5ff;
+  --color-surface-container: #eceef0;
+
+  --font-sans: "Inter", sans-serif;
+  --font-headline: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.glass-panel {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+}
+.water-pattern {
+    background-color: #f7f9fb;
+    background-image: radial-gradient(at 0% 0%, rgba(12, 58, 109, 0.05) 0px, transparent 50%),
+                      radial-gradient(at 100% 100%, rgba(44, 105, 78, 0.05) 0px, transparent 50%),
+                      linear-gradient(135deg, rgba(12, 58, 109, 0.02) 0%, rgba(255, 255, 255, 0) 100%);
+}
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: max(884px, 100dvh);
+}
+
+/* Leaderboard animations */
+@keyframes leaderboardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes leaderboardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.leaderboard-animate-in {
+  animation: leaderboardFadeIn 0.4s ease-out;
+}
+
+.leaderboard-row {
+  animation: leaderboardSlideUp 0.4s ease-out both;
 }
