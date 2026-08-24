@@ -53,6 +53,9 @@ export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [datesWithData, setDatesWithData] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalEntries, setTotalEntries] = useState(0);
   const [loading, setLoading] = useState(false);
   const [animateKey, setAnimateKey] = useState(0);
   const [selectedReport, setSelectedReport] = useState<LeaderboardEntry | null>(null);
@@ -108,19 +111,24 @@ export default function Leaderboard() {
       .catch(() => {});
   }, []);
 
-  // Fetch leaderboard for selected date
-  const fetchLeaderboard = useCallback(async (date: string, search: string) => {
+  // Fetch leaderboard for selected date and page
+  const fetchLeaderboard = useCallback(async (date: string, search: string, page: number) => {
     setLoading(true);
     try {
-      let url = `/api/leaderboard?date=${date}`;
+      let url = `/api/leaderboard?date=${date}&page=${page}&limit=10`;
       if (search.trim()) {
         url += `&search=${encodeURIComponent(search.trim())}`;
       }
       const res = await fetch(url);
       const data = await res.json();
       setEntries(data.entries || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalEntries(data.totalEntries || 0);
+      setCurrentPage(data.currentPage || 1);
     } catch {
       setEntries([]);
+      setTotalPages(1);
+      setTotalEntries(0);
     } finally {
       setLoading(false);
     }
@@ -128,10 +136,20 @@ export default function Leaderboard() {
 
   useEffect(() => {
     if (selectedDate) {
-      fetchLeaderboard(selectedDate, searchQuery);
+      fetchLeaderboard(selectedDate, searchQuery, currentPage);
       setAnimateKey(prev => prev + 1);
     }
-  }, [selectedDate, searchQuery, fetchLeaderboard]);
+  }, [selectedDate, searchQuery, currentPage, fetchLeaderboard]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
 
   // Calendar helpers
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -161,6 +179,7 @@ export default function Leaderboard() {
     const dateStr = `${currentYear}-${m}-${d}`;
     setSelectedDate(dateStr);
     setSearchQuery('');
+    setCurrentPage(1);
   };
 
   const todayStr = localTodayStr;
@@ -273,13 +292,13 @@ export default function Leaderboard() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
                   placeholder="Search by participant name..."
                   className="w-full bg-surface-container-high/50 border-none rounded-xl pl-12 pr-5 py-4 text-on-surface placeholder:text-outline focus:ring-0 focus:bg-white transition-all duration-300 outline-none"
                 />
                 {searchQuery && (
                   <button
-                    onClick={() => setSearchQuery('')}
+                    onClick={handleClearSearch}
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-outline/10 flex items-center justify-center hover:bg-outline/20 transition-colors"
                   >
                     <span className="material-symbols-outlined text-outline text-base">close</span>
@@ -288,122 +307,170 @@ export default function Leaderboard() {
               </div>
             </div>
 
-            {/* Date Label */}
-            <div className="flex items-center gap-3">
-              <span
-                className="material-symbols-outlined text-secondary text-2xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                calendar_today
-              </span>
-              <div>
-                <h3 className="text-xl font-bold text-primary font-headline">{formattedDate}</h3>
-                <p className="text-sm text-outline">
-                  {searchQuery
-                    ? `Showing results for "${searchQuery}"`
-                    : 'Top 10 Performers'
-                  }
-                </p>
+            {/* Date Label & Summary */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span
+                  className="material-symbols-outlined text-secondary text-2xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  calendar_today
+                </span>
+                <div>
+                  <h3 className="text-xl font-bold text-primary font-headline">{formattedDate}</h3>
+                  <p className="text-sm text-outline">
+                    {searchQuery
+                      ? `Showing results for "${searchQuery}"`
+                      : totalEntries > 0
+                        ? `Daily Rankings (${totalEntries} Participants)`
+                        : 'Top Performers'
+                    }
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Leaderboard Table */}
             <div
               key={animateKey}
-              className="glass-panel rounded-[2rem] overflow-hidden shadow-[0px_24px_48px_rgba(12,58,109,0.06)] border border-white/40 leaderboard-animate-in"
+              className="glass-panel rounded-[2rem] overflow-hidden shadow-[0px_24px_48px_rgba(12,58,109,0.06)] border border-white/40 leaderboard-animate-in flex flex-col justify-between min-h-[350px]"
             >
-              {/* Header Row */}
-              <div className="bg-gradient-to-r from-primary to-primary-container px-6 py-4">
-                <div className="grid grid-cols-[50px_1fr_1fr_80px_70px] md:grid-cols-[60px_1.5fr_1.5fr_100px_80px] gap-2 text-[11px] font-bold uppercase tracking-widest text-white/80">
-                  <span>Rank</span>
-                  <span>Name</span>
-                  <span>Institution</span>
-                  <span>Level</span>
-                  <span className="text-right">Score</span>
-                </div>
-              </div>
-
-              {/* Entries */}
-              {loading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="flex flex-col items-center gap-3">
-                    <span className="material-symbols-outlined text-primary text-3xl animate-spin">progress_activity</span>
-                    <span className="text-sm text-outline font-medium">Loading results...</span>
+              <div>
+                {/* Header Row */}
+                <div className="bg-gradient-to-r from-primary to-primary-container px-6 py-4">
+                  <div className="grid grid-cols-[50px_1fr_1fr_80px_70px] md:grid-cols-[60px_1.5fr_1.5fr_100px_80px] gap-2 text-[11px] font-bold uppercase tracking-widest text-white/80">
+                    <span>Rank</span>
+                    <span>Name</span>
+                    <span>Institution</span>
+                    <span>Level</span>
+                    <span className="text-right">Score</span>
                   </div>
                 </div>
-              ) : entries.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-6">
-                  <span
-                    className="material-symbols-outlined text-5xl text-outline/30 mb-4"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    sentiment_neutral
-                  </span>
-                  <p className="text-lg font-bold text-on-surface-variant mb-1">
-                    {searchQuery ? 'No matching participants' : 'No results yet'}
-                  </p>
-                  <p className="text-sm text-outline text-center max-w-xs">
-                    {searchQuery
-                      ? `No one named "${searchQuery}" took the quiz on this date.`
-                      : 'No quiz attempts were recorded on this date. Try selecting another day!'
-                    }
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-outline-variant/10">
-                  {entries.map((entry, idx) => {
-                    const rank = entry.rank || idx + 1;
-                    const { emoji, bg } = getRankDisplay(rank);
-                    return (
-                      <div
-                        key={`${entry.name}-${entry.timestamp}`}
-                        onClick={() => handleOpenReport(entry)}
-                        className={`
-                          grid grid-cols-[50px_1fr_1fr_80px_70px] md:grid-cols-[60px_1.5fr_1.5fr_100px_80px]
-                          gap-2 items-center px-6 py-4
-                          hover:bg-surface-container-high/30 transition-colors duration-200
-                          leaderboard-row cursor-pointer
-                        `}
-                        style={{ animationDelay: `${idx * 60}ms` }}
-                      >
-                        {/* Rank */}
-                        <div className="flex items-center justify-center">
-                          {rank <= 3 ? (
-                            <span className="text-2xl">{emoji}</span>
-                          ) : (
-                            <span className={`w-8 h-8 rounded-full ${bg} border flex items-center justify-center text-sm font-bold text-on-surface-variant`}>
-                              {emoji}
+
+                {/* Entries */}
+                {loading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="flex flex-col items-center gap-3">
+                      <span className="material-symbols-outlined text-primary text-3xl animate-spin">progress_activity</span>
+                      <span className="text-sm text-outline font-medium">Loading results...</span>
+                    </div>
+                  </div>
+                ) : entries.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 px-6">
+                    <span
+                      className="material-symbols-outlined text-5xl text-outline/30 mb-4"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      sentiment_neutral
+                    </span>
+                    <p className="text-lg font-bold text-on-surface-variant mb-1">
+                      {searchQuery ? 'No matching participants' : 'No results yet'}
+                    </p>
+                    <p className="text-sm text-outline text-center max-w-xs">
+                      {searchQuery
+                        ? `No one named "${searchQuery}" took the quiz on this date.`
+                        : 'No quiz attempts were recorded on this date. Try selecting another day!'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-outline-variant/10">
+                    {entries.map((entry, idx) => {
+                      const rank = entry.rank || idx + 1;
+                      const { emoji, bg } = getRankDisplay(rank);
+                      return (
+                        <div
+                          key={`${entry.name}-${entry.timestamp}-${idx}`}
+                          onClick={() => handleOpenReport(entry)}
+                          className={`
+                            grid grid-cols-[50px_1fr_1fr_80px_70px] md:grid-cols-[60px_1.5fr_1.5fr_100px_80px]
+                            gap-2 items-center px-6 py-4
+                            hover:bg-surface-container-high/30 transition-colors duration-200
+                            leaderboard-row cursor-pointer
+                          `}
+                          style={{ animationDelay: `${idx * 60}ms` }}
+                        >
+                          {/* Rank */}
+                          <div className="flex items-center justify-center">
+                            {rank <= 3 ? (
+                              <span className="text-2xl">{emoji}</span>
+                            ) : (
+                              <span className={`w-8 h-8 rounded-full ${bg} border flex items-center justify-center text-sm font-bold text-on-surface-variant`}>
+                                {emoji}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Name */}
+                          <div className="min-w-0">
+                            <p className="font-bold text-on-surface truncate">{entry.name}</p>
+                          </div>
+
+                          {/* School */}
+                          <div className="min-w-0">
+                            <p className="text-sm text-on-surface-variant truncate">{entry.school}</p>
+                          </div>
+
+                          {/* Level */}
+                          <div>
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${getLevelColor(entry.level)}`}>
+                              {getLevelLabel(entry.level)}
                             </span>
-                          )}
-                        </div>
+                          </div>
 
-                        {/* Name */}
-                        <div className="min-w-0">
-                          <p className="font-bold text-on-surface truncate">{entry.name}</p>
+                          {/* Score */}
+                          <div className="text-right">
+                            <span className="text-xl font-black text-primary">{entry.score}</span>
+                            <span className="text-xs text-outline font-medium">/10</span>
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                        {/* School */}
-                        <div className="min-w-0">
-                          <p className="text-sm text-on-surface-variant truncate">{entry.school}</p>
-                        </div>
-
-                        {/* Level */}
-                        <div>
-                          <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${getLevelColor(entry.level)}`}>
-                            {getLevelLabel(entry.level)}
-                          </span>
-                        </div>
-
-                        {/* Score */}
-                        <div className="text-right">
-                          <span className="text-xl font-black text-primary">{entry.score}</span>
-                          <span className="text-xs text-outline font-medium">/10</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/20 border-t border-outline-variant/10 mt-auto">
+                  <span className="text-xs font-semibold text-outline">
+                    Showing page {currentPage} of {totalPages} ({totalEntries} total)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 disabled:opacity-40 disabled:hover:bg-primary/10 transition-colors"
+                    >
+                      Previous
+                    </button>
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                            pageNum === currentPage
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-surface-container-high/50 text-on-surface-variant hover:bg-primary/10'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    <button
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 disabled:opacity-40 disabled:hover:bg-primary/10 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
+
             </div>
           </div>
         </div>

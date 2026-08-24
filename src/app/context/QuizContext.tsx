@@ -1,5 +1,5 @@
 'use client'
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface QuizContextType {
   studentName: string;
@@ -19,12 +19,46 @@ interface QuizContextType {
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
 
 export function QuizProvider({ children }: { children: ReactNode }) {
-  const [studentName, setStudentName] = useState('');
-  const [schoolName, setSchoolName] = useState('');
-  const [studyLevel, setStudyLevel] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('');
+  const [studentName, setStudentNameState] = useState('');
+  const [schoolName, setSchoolNameState] = useState('');
+  const [studyLevel, setStudyLevelState] = useState('');
+  const [selectedLevel, setSelectedLevelState] = useState('');
   const [questions, setQuestions] = useState<any[]>([]);
   const [userAnswers, setUserAnswers] = useState<{ [key: number]: string }>({});
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedStudent = sessionStorage.getItem('studentName');
+      const savedSchool = sessionStorage.getItem('schoolName');
+      const savedStudy = sessionStorage.getItem('studyLevel');
+      const savedSelected = sessionStorage.getItem('selectedLevel');
+
+      if (savedStudent) setStudentNameState(savedStudent);
+      if (savedSchool) setSchoolNameState(savedSchool);
+      if (savedStudy) setStudyLevelState(savedStudy);
+      if (savedSelected) setSelectedLevelState(savedSelected);
+    }
+  }, []);
+
+  const setStudentName = (name: string) => {
+    setStudentNameState(name);
+    if (typeof window !== 'undefined') sessionStorage.setItem('studentName', name);
+  };
+
+  const setSchoolName = (school: string) => {
+    setSchoolNameState(school);
+    if (typeof window !== 'undefined') sessionStorage.setItem('schoolName', school);
+  };
+
+  const setStudyLevel = (level: string) => {
+    setStudyLevelState(level);
+    if (typeof window !== 'undefined') sessionStorage.setItem('studyLevel', level);
+  };
+
+  const setSelectedLevel = (level: string) => {
+    setSelectedLevelState(level);
+    if (typeof window !== 'undefined') sessionStorage.setItem('selectedLevel', level);
+  };
 
   return (
     <QuizContext.Provider value={{
